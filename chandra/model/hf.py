@@ -1,3 +1,4 @@
+import os
 from typing import List
 
 from chandra.model.schema import BatchInputItem, GenerationResult
@@ -84,9 +85,22 @@ def load_model():
     if settings.TORCH_DEVICE:
         device_map = {"": settings.TORCH_DEVICE}
 
+    # Honor the standard HuggingFace offline environment variables as well,
+    # so `HF_HUB_OFFLINE=1 chandra ...` (or TRANSFORMERS_OFFLINE=1) works
+    # without any code change. When set, huggingface_hub / transformers will
+    # never contact huggingface.co and load everything (including the chat
+    # template files chat_template.jinja / chat_template.json) from the local
+    # cache ($HF_HOME, by default ~/.cache/huggingface).
+    env_offline = any(
+        os.environ.get(var, "").strip().lower() in ("1", "true", "yes")
+        for var in ("HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE")
+    )
+    local_files_only = bool(settings.LOCAL_FILES_ONLY) or env_offline
+
     kwargs = {
         "dtype": torch.bfloat16,
         "device_map": device_map,
+        "local_files_only": local_files_only,
     }
     if settings.TORCH_ATTN:
         kwargs["attn_implementation"] = settings.TORCH_ATTN
@@ -95,7 +109,13 @@ def load_model():
         settings.MODEL_CHECKPOINT, **kwargs
     )
     model = model.eval()
-    processor = AutoProcessor.from_pretrained(settings.MODEL_CHECKPOINT)
+    # The processor is what triggers the extra request for the chat template
+    # file (chat_template.jinja / chat_template.json). Passing
+    # local_files_only=True makes it resolve the template from the local
+    # snapshot in the HF cache instead of hitting huggingface.co.
+    processor = AutoProcessor.from_pretrained(
+        settings.MODEL_CHECKPOINT, local_files_only=local_files_only
+    )
     processor.tokenizer.padding_side = "left"
     model.processor = processor
     return model

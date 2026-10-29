@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     MAX_OUTPUT_TOKENS: int = 12384
     TORCH_ATTN: str | None = None
     BBOX_SCALE: int = 1000
+    # When True, load model/processor strictly from the local HF cache
+    # (no requests to huggingface.co). Can also be enabled by setting the
+    # standard environment variables HF_HUB_OFFLINE=1 or TRANSFORMERS_OFFLINE=1.
+    LOCAL_FILES_ONLY: bool = False
 
     # vLLM server settings
     VLLM_API_KEY: str = "EMPTY"
