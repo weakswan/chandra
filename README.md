@@ -195,6 +195,9 @@ Settings can be configured via environment variables or a `local.env` file:
 # Model settings
 MODEL_CHECKPOINT=datalab-to/chandra-ocr-2
 MAX_OUTPUT_TOKENS=12384
+# Load strictly from the local HuggingFace cache (no requests to huggingface.co).
+# Equivalent to setting HF_HUB_OFFLINE=1 or TRANSFORMERS_OFFLINE=1.
+LOCAL_FILES_ONLY=false
 
 # vLLM settings
 VLLM_API_BASE=http://localhost:8000/v1
